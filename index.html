@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notes</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #F5F0E8; --card: #FDFAF4; --ink: #1C1A16; --ink-light: #7A7568;
+    --accent: #C4622D; --border: #E2DAC8; --done-bg: #EAF0E8; --done-ink: #5A7A55;
+    --shadow: 0 2px 12px rgba(28,26,22,0.08);
+    --c-today:#C4622D; --c-weekly:#2D7FC4; --c-monthly:#7A3DB8; --c-quarterly:#2D9E6B; --c-annually:#B8873D; --c-tomorrow:#2A9AA8;
+  }
+  body {
+    font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 100vh;
+    padding: 48px 24px 80px;
+    background-image: radial-gradient(ellipse at 10% 20%, rgba(196,98,45,0.06) 0%, transparent 50%),
+                      radial-gradient(ellipse at 90% 80%, rgba(90,110,80,0.06) 0%, transparent 50%);
+  }
+  header { max-width:760px; margin:0 auto 32px; display:flex; align-items:baseline; justify-content:space-between; border-bottom:1.5px solid var(--border); padding-bottom:20px; }
+  header h1 { font-family:'Playfair Display',serif; font-size:2rem; color:var(--ink); letter-spacing:-0.02em; }
+  header span { font-size:0.8rem; color:var(--ink-light); font-weight:300; letter-spacing:0.06em; text-transform:uppercase; }
+  .tabs { max-width:760px; margin:0 auto 28px; display:flex; gap:8px; flex-wrap:wrap; }
+  .tab { padding:7px 18px; border-radius:99px; border:1.5px solid var(--border); background:var(--card); font-family:'DM Sans',sans-serif; font-size:0.82rem; font-weight:500; letter-spacing:0.04em; color:var(--ink-light); cursor:pointer; transition:all 0.18s; text-transform:uppercase; }
+  .tab:hover { border-color:var(--accent); color:var(--accent); }
+  .tab.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .add-form { max-width:760px; margin:0 auto 28px; display:flex; gap:10px; flex-wrap:wrap; }
+  .add-form input { flex:1; min-width:180px; padding:12px 16px; font-family:'DM Sans',sans-serif; font-size:0.95rem; background:var(--card); border:1.5px solid var(--border); border-radius:8px; color:var(--ink); outline:none; transition:border-color 0.2s; }
+  .add-form input:focus { border-color:var(--accent); }
+  .add-form input::placeholder { color:var(--ink-light); }
+  .add-form select { padding:12px 14px; font-family:'DM Sans',sans-serif; font-size:0.85rem; background:var(--card); border:1.5px solid var(--border); border-radius:8px; color:var(--ink); outline:none; cursor:pointer; }
+  .add-form button { padding:12px 22px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:0.9rem; font-weight:500; cursor:pointer; transition:opacity 0.15s,transform 0.1s; white-space:nowrap; }
+  .add-form button:hover { opacity:0.88; transform:translateY(-1px); }
+  .category-section { max-width:760px; margin:0 auto 36px; }
+  .category-section.hidden { display:none; }
+  .cat-header { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+  .cat-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .cat-dot.today{background:var(--c-today);} .cat-dot.weekly{background:var(--c-weekly);} .cat-dot.monthly{background:var(--c-monthly);} .cat-dot.quarterly{background:var(--c-quarterly);} .cat-dot.annually{background:var(--c-annually);} .cat-dot.tomorrow{background:var(--c-tomorrow);}
+  .cat-label { font-family:'Playfair Display',serif; font-size:1.05rem; color:var(--ink); }
+  .cat-count { font-size:0.75rem; color:var(--ink-light); background:var(--border); padding:2px 8px; border-radius:99px; font-weight:500; }
+  .cat-line { flex:1; height:1px; background:var(--border); }
+  .notes-grid { display:flex; flex-direction:column; gap:10px; min-height:52px; border-radius:10px; transition:background 0.2s; padding:2px; }
+  .notes-grid.drag-over { background:rgba(196,98,45,0.05); outline:2px dashed var(--border); }
+  .note-card { background:var(--card); border:1.5px solid var(--border); border-radius:10px; padding:14px 16px 14px 20px; display:flex; align-items:center; gap:12px; box-shadow:var(--shadow); transition:transform 0.15s,box-shadow 0.15s; position:relative; }
+  .note-card::before { content:''; position:absolute; left:0; top:8px; bottom:8px; width:3px; border-radius:0 3px 3px 0; }
+  .note-card[data-cat="today"]::before    {background:var(--c-today);}
+  .note-card[data-cat="weekly"]::before   {background:var(--c-weekly);}
+  .note-card[data-cat="monthly"]::before  {background:var(--c-monthly);}
+  .note-card[data-cat="quarterly"]::before{background:var(--c-quarterly);}
+  .note-card[data-cat="annually"]::before {background:var(--c-annually);} .note-card[data-cat="tomorrow"]::before{background:var(--c-tomorrow);}
+  .note-card:hover:not(.sortable-chosen) { transform:translateY(-2px); box-shadow:0 6px 20px rgba(28,26,22,0.12); }
+  .sortable-ghost { opacity:0.3; background:#F0DDD1 !important; border:2px dashed var(--accent) !important; }
+  .sortable-chosen { opacity:0.92; box-shadow:0 10px 30px rgba(28,26,22,0.2) !important; transform:scale(1.02); }
+  .note-card.done { background:var(--done-bg); border-color:#C5DAC2; opacity:0.7; }
+  .drag-handle { color:var(--border); font-size:1.1rem; cursor:grab; flex-shrink:0; line-height:1; transition:color 0.15s; touch-action:none; }
+  .note-card:hover .drag-handle { color:var(--ink-light); }
+  .note-num { font-family:'Playfair Display',serif; font-size:1rem; color:var(--accent); min-width:20px; line-height:1; user-select:none; flex-shrink:0; }
+  .note-card.done .note-num { color:var(--done-ink); }
+  .note-text { flex:1; font-size:0.95rem; color:var(--ink); line-height:1.5; word-break:break-word; border-radius:4px; padding:2px 4px; transition:background 0.15s; cursor:text; }
+  .note-card.done .note-text { text-decoration:line-through; color:var(--done-ink); }
+  .note-text:focus { outline:none; background:rgba(196,98,45,0.07); }
+  .cat-pill { font-size:0.68rem; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; padding:2px 8px; border-radius:99px; flex-shrink:0; display:none; cursor:pointer; position:relative; transition: opacity 0.15s; }
+  .cat-pill:hover { opacity: 0.75; }
+  .cat-pill-wrap { position:relative; flex-shrink:0; display:none; }
+  .show-pills .cat-pill-wrap { display:block; }
+  .cat-dropdown {
+    position:absolute; right:0; top:calc(100% + 6px);
+    background:var(--card); border:1.5px solid var(--border);
+    border-radius:10px; box-shadow:0 8px 24px rgba(28,26,22,0.14);
+    overflow:hidden; z-index:100; min-width:130px;
+    opacity:0; pointer-events:none; transform:translateY(-4px);
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  .cat-dropdown.open { opacity:1; pointer-events:all; transform:translateY(0); }
+  .cat-dropdown-item {
+    display:flex; align-items:center; gap:8px;
+    padding:8px 14px; font-size:0.78rem; font-weight:500;
+    letter-spacing:0.04em; text-transform:uppercase;
+    cursor:pointer; transition:background 0.12s; color:var(--ink);
+    font-family:'DM Sans',sans-serif;
+  }
+  .cat-dropdown-item:hover { background:var(--bg); }
+  .cat-dropdown-item .dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .cat-dropdown-item.active-cat { font-weight:700; }
+  .cat-pill.today{background:rgba(196,98,45,0.12);color:var(--c-today);}
+  .cat-pill.weekly{background:rgba(45,127,196,0.12);color:var(--c-weekly);}
+  .cat-pill.monthly{background:rgba(122,61,184,0.12);color:var(--c-monthly);}
+  .cat-pill.quarterly{background:rgba(45,158,107,0.12);color:var(--c-quarterly);}
+  .cat-pill.annually{background:rgba(184,135,61,0.12);color:var(--c-annually);} .cat-pill.tomorrow{background:rgba(42,154,168,0.12);color:var(--c-tomorrow);}
+  .note-actions { display:flex; gap:5px; opacity:0; transition:opacity 0.15s; flex-shrink:0; }
+  .note-card:hover .note-actions { opacity:1; }
+  .btn-icon { width:28px; height:28px; border:none; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.82rem; transition:background 0.15s,transform 0.1s; }
+  .btn-check{background:#E8F2E6;color:#4A7A45;} .btn-check:hover{background:#C8E6C4;}
+  .btn-delete{background:#F5E8E2;color:#B05030;} .btn-delete:hover{background:#F0D0C5;}
+  .btn-icon:active{transform:scale(0.92);}
+  .done-badge { position:absolute; top:-7px; right:10px; background:var(--done-ink); color:#fff; font-size:0.6rem; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; padding:2px 7px; border-radius:99px; opacity:0; transition:opacity 0.2s; pointer-events:none; }
+  .note-card.done .done-badge { opacity:1; }
+  .empty-cat { text-align:center; color:var(--ink-light); font-size:0.88rem; padding:18px 0; border:1.5px dashed var(--border); border-radius:10px; font-style:italic; pointer-events:none; }
+  footer { max-width:760px; margin:40px auto 0; text-align:center; font-size:0.75rem; color:var(--ink-light); letter-spacing:0.04em; }
+  .sync-status { position:fixed; bottom:18px; right:18px; font-size:0.75rem; font-family:'DM Sans',sans-serif; padding:6px 14px; border-radius:99px; font-weight:500; transition:opacity 0.3s; background:var(--card); border:1.5px solid var(--border); box-shadow:var(--shadow); }
+  .sync-status.loading { color:var(--accent); border-color:var(--accent); }
+  .sync-status.ok { color:var(--done-ink); border-color:#C5DAC2; }
+  .sync-status.error { color:#B05030; border-color:#F0D0C5; }
+  .sync-status:empty { display:none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Notes</h1>
+  <span id="counter">4 notes</span>
+</header>
+
+<div class="tabs">
+  <button class="tab active" data-filter="all"       onclick="filterTab(this)">All</button>
+  <button class="tab"        data-filter="today"     onclick="filterTab(this)">Today</button>
+  <button class="tab"        data-filter="weekly"    onclick="filterTab(this)">Weekly</button>
+  <button class="tab"        data-filter="monthly"   onclick="filterTab(this)">Monthly</button>
+  <button class="tab"        data-filter="quarterly" onclick="filterTab(this)">Quarterly</button>
+  <button class="tab"        data-filter="annually"  onclick="filterTab(this)">Annually</button>
+  <button class="tab"        data-filter="tomorrow"  onclick="filterTab(this)">Tomorrow</button>
+</div>
+
+<div class="add-form">
+  <input type="text" id="newNote" placeholder="Add a new note…" enterkeyhint="send" autocomplete="off" />
+  <select id="newCat">
+    <option value="today">Today</option>
+    <option value="weekly">Weekly</option>
+    <option value="monthly">Monthly</option>
+    <option value="quarterly">Quarterly</option>
+    <option value="annually">Annually</option>
+    <option value="tomorrow">Tomorrow</option>
+  </select>
+  <button onclick="addNote()">+ Add</button>
+</div>
+
+<div id="sec-today" class="category-section"><div class="cat-header"><span class="cat-dot today"></span><span class="cat-label">Today</span><span class="cat-count" id="cnt-today">0</span><span class="cat-line"></span></div><div class="notes-grid" id="grid-today" data-cat="today"></div></div>
+<div id="sec-tomorrow" class="category-section"><div class="cat-header"><span class="cat-dot tomorrow"></span><span class="cat-label">Tomorrow</span><span class="cat-count" id="cnt-tomorrow">0</span><span class="cat-line"></span></div><div class="notes-grid" id="grid-tomorrow" data-cat="tomorrow"></div></div>
+<div id="sec-weekly" class="category-section"><div class="cat-header"><span class="cat-dot weekly"></span><span class="cat-label">Weekly</span><span class="cat-count" id="cnt-weekly">0</span><span class="cat-line"></span></div><div class="notes-grid" id="grid-weekly" data-cat="weekly"></div></div>
+<div id="sec-monthly" class="category-section"><div class="cat-header"><span class="cat-dot monthly"></span><span class="cat-label">Monthly</span><span class="cat-count" id="cnt-monthly">0</span><span class="cat-line"></span></div><div class="notes-grid" id="grid-monthly" data-cat="monthly"></div></div>
+<div id="sec-quarterly" class="category-section"><div class="cat-header"><span class="cat-dot quarterly"></span><span class="cat-label">Quarterly</span><span class="cat-count" id="cnt-quarterly">0</span><span class="cat-line"></span></div><div class="notes-grid" id="grid-quarterly" data-cat="quarterly"></div></div>
+<div id="sec-annually" class="category-section"><div class="cat-header"><span class="cat-dot annually"></span><span class="cat-label">Annually</span><span class="cat-count" id="cnt-annually">0</span><span class="cat-line"></span></div><div class="notes-grid" id="grid-annually" data-cat="annually"></div></div>
+
+
+<div id="sync-status" class="sync-status"></div>
+<footer>Tap text to edit · Drag ⠿ to move between categories · Hover for actions</footer>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbxsgylDrP7Vq7QCXvQoK0oerGuUY_uujwirE6Jm7A4ADjw-Ec65BLOWwac6Zt5mqexpGQ/exec';
+const STORAGE_KEY = 'andora_notes_v3'; // local cache fallback
+const CATS = ['today','tomorrow','weekly','monthly','quarterly','annually'];
+
+let notes = [];
+let nextId = 1;
+let activeFilter = 'all';
+const sortables = {};
+let saveTimeout = null;
+
+// ── Show/hide sync status ──────────────────────────────
+function setStatus(msg, type) {
+  const el = document.getElementById('sync-status');
+  el.textContent = msg;
+  el.className = 'sync-status ' + (type || '');
+  if (type === 'ok') setTimeout(() => { el.textContent = ''; el.className = 'sync-status'; }, 2500);
+}
+
+// ── Load from Google Sheets ───────────────────────────
+async function loadFromSheets() {
+  setStatus('Syncing…', 'loading');
+  try {
+    const res = await fetch(API_URL);
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      notes = data.map(n => ({ ...n, id: Number(n.id), done: n.done === true || n.done === 'TRUE' || n.done === true }));
+      nextId = notes.length > 0 ? Math.max(...notes.map(n => n.id)) + 1 : 1;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+      setStatus('Synced ✓', 'ok');
+    }
+  } catch(e) {
+    // Fall back to local cache
+    const cached = localStorage.getItem(STORAGE_KEY);
+    if (cached) {
+      notes = JSON.parse(cached);
+      nextId = notes.length > 0 ? Math.max(...notes.map(n => n.id)) + 1 : 1;
+    } else {
+      notes = [
+        { id:1, text:"Buy a water pump for the pool.", done:false, cat:"today" },
+        { id:2, text:"Prepare the Gavos meeting.",     done:false, cat:"weekly" },
+        { id:3, text:"Reply to Leftly.",               done:false, cat:"today" },
+        { id:4, text:"Make a plan for Casa Santian.",  done:false, cat:"monthly" },
+      ];
+      nextId = 5;
+    }
+    setStatus('Offline — local cache', 'error');
+  }
+  render();
+}
+
+// ── Save to Google Sheets (debounced) ─────────────────
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); // immediate local cache
+  updateCounter();
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(pushToSheets, 600);
+}
+
+async function pushToSheets() {
+  setStatus('Saving…', 'loading');
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify(notes),
+      headers: { 'Content-Type': 'text/plain' }, // Apps Script requires text/plain for doPost
+    });
+    setStatus('Saved ✓', 'ok');
+  } catch(e) {
+    setStatus('Saved locally (offline)', 'error');
+  }
+}
+
+function updateCounter() {
+  const total = notes.length, done = notes.filter(n => n.done).length;
+  document.getElementById('counter').textContent =
+    done > 0 ? `${done}/${total} done` : `${total} note${total !== 1 ? 's' : ''}`;
+}
+
+function filterTab(btn) {
+  activeFilter = btn.dataset.filter;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  // Sync dropdown to active tab so it's always clear where note will go
+  const select = document.getElementById('newCat');
+  if (activeFilter !== 'all') select.value = activeFilter;
+  render();
+}
+
+function render() {
+  CATS.forEach(cat => {
+    const visible = activeFilter === 'all' || activeFilter === cat;
+    document.getElementById('sec-' + cat).classList.toggle('hidden', !visible);
+    const catNotes = notes.filter(n => n.cat === cat);
+    document.getElementById('cnt-' + cat).textContent = catNotes.length;
+    const grid = document.getElementById('grid-' + cat);
+    grid.innerHTML = '';
+    if (catNotes.length === 0) {
+      grid.innerHTML = `<div class="empty-cat">Drop notes here or add one above.</div>`;
+    } else {
+      catNotes.forEach((note, idx) => grid.appendChild(makeCard(note, idx)));
+    }
+    grid.classList.toggle('show-pills', activeFilter === 'all');
+  });
+  updateCounter();
+  initSortables();
+}
+
+function makeCard(note, idx) {
+  const card = document.createElement('div');
+  card.className = `note-card${note.done ? ' done' : ''}`;
+  card.dataset.id  = note.id;
+  card.dataset.cat = note.cat;
+  card.innerHTML = `
+    <span class="done-badge">Done</span>
+    <span class="drag-handle" title="Drag to move">⠿</span>
+    <span class="note-num">${idx + 1}</span>
+    <span class="note-text" contenteditable="true" spellcheck="false">${escHtml(note.text)}</span>
+    <div class="cat-pill-wrap" id="wrap-${note.id}">
+      <span class="cat-pill ${note.cat}" onclick="toggleCatDropdown(event, ${note.id})">${note.cat}</span>
+      <div class="cat-dropdown" id="catdd-${note.id}">
+        ${CATS.map(c => '<div class="cat-dropdown-item' + (c === note.cat ? ' active-cat' : '') + '" onclick="changeCat(event,' + note.id + ',\'' + c + '\')">' +
+          '<span class="dot" style="background:var(--c-' + c + ')"></span>' + c + '</div>').join('')}
+      </div>
+    </div>
+    <div class="note-actions">
+      <button class="btn-icon btn-check" title="${note.done ? 'Uncheck' : 'Done'}" onclick="toggleDone(${note.id})">${note.done ? '↩' : '✓'}</button>
+      <button class="btn-icon btn-delete" title="Delete" onclick="deleteNote(${note.id})">✕</button>
+    </div>`;
+
+  const textEl = card.querySelector('.note-text');
+  textEl.addEventListener('blur', () => {
+    const n = notes.find(n => n.id === note.id);
+    if (n) { const t = textEl.textContent.trim(); if (t && t !== n.text) { n.text = t; save(); } }
+  });
+  textEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); textEl.blur(); } });
+  textEl.addEventListener('mousedown', e => e.stopPropagation());
+  textEl.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
+  return card;
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function initSortables() {
+  CATS.forEach(cat => {
+    if (sortables[cat]) { try { sortables[cat].destroy(); } catch(e){} }
+    const grid = document.getElementById('grid-' + cat);
+    sortables[cat] = Sortable.create(grid, {
+      group: 'notes',
+      animation: 150,
+      handle: '.drag-handle',
+      ghostClass: 'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      filter: '.empty-cat',
+      onAdd(evt) {
+        const id = parseInt(evt.item.dataset.id);
+        const n  = notes.find(n => n.id === id);
+        if (n && n.cat !== cat) { n.cat = cat; save(); render(); }
+      },
+      onEnd() {
+        CATS.forEach(c => {
+          document.getElementById('grid-' + c).querySelectorAll('.note-card').forEach((el, i) => {
+            const n = notes.find(n => n.id === parseInt(el.dataset.id));
+            if (n) n._order = i;
+          });
+        });
+        notes.sort((a, b) => {
+          if (a.cat !== b.cat) return CATS.indexOf(a.cat) - CATS.indexOf(b.cat);
+          return (a._order ?? 0) - (b._order ?? 0);
+        });
+        save();
+      },
+    });
+  });
+}
+
+function toggleDone(id) {
+  const n = notes.find(n => n.id === id);
+  if (n) { n.done = !n.done; save(); render(); }
+}
+
+function deleteNote(id) {
+  notes = notes.filter(n => n.id !== id);
+  save(); render();
+}
+
+function addNote() {
+  const input = document.getElementById('newNote');
+  const select = document.getElementById('newCat');
+  // If a specific category tab is active, use that — otherwise use the dropdown
+  const cat = (activeFilter !== 'all') ? activeFilter : select.value;
+  const text = input.value.trim();
+  if (!text) return;
+  notes.push({ id: nextId++, text, done: false, cat });
+  input.value = '';
+  save(); render();
+}
+
+const noteInput = document.getElementById('newNote');
+noteInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addNote(); } });
+noteInput.addEventListener('keyup',   e => { if (e.key === 'Enter') { e.preventDefault(); addNote(); } });
+
+function toggleCatDropdown(e, id) {
+  e.stopPropagation();
+  const dd = document.getElementById('catdd-' + id);
+  const isOpen = dd.classList.contains('open');
+  // Close all others
+  document.querySelectorAll('.cat-dropdown.open').forEach(el => el.classList.remove('open'));
+  if (!isOpen) dd.classList.add('open');
+}
+
+function changeCat(e, id, newCat) {
+  e.stopPropagation();
+  const n = notes.find(n => n.id === id);
+  if (n && n.cat !== newCat) {
+    n.cat = newCat;
+    save();
+    render();
+  } else {
+    document.querySelectorAll('.cat-dropdown.open').forEach(el => el.classList.remove('open'));
+  }
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', () => {
+  document.querySelectorAll('.cat-dropdown.open').forEach(el => el.classList.remove('open'));
+});
+
+loadFromSheets();
+</script>
+</body>
+</html>
